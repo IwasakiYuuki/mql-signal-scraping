@@ -34,3 +34,17 @@ class SignalTop:
             "subscriber_funds": self.subscriber_funds,
             "currency": self.currency,
         }
+
+    @classmethod
+    def from_record(cls, record: dict):
+        return cls(
+            name=record["name"],
+            author=record["author"],
+            rating=record["rating"],
+            rating_num=record["rating_num"],
+            reliability=record["reliability"],
+            week=record["week"],
+            subscriber_num=record["subscriber_num"],
+            subscriber_funds=record["subscriber_funds"],
+            currency=record["currency"],
+        )

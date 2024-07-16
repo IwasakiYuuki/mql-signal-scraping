@@ -1,4 +1,5 @@
-from multiprocessing import Pool, Manager
+import time
+from pathlib import Path
 
 import pandas as pd
 from typer import Typer
@@ -25,25 +26,31 @@ def get_signal_links(driver: webdriver.Chrome, limit: int) -> list[str]:
         if len(signal_links) >= limit:
             break
         i += 1
+        time.sleep(20)
     return signal_links[:limit]
 
-def scraping_signals(driver, signal_links):
+def scraping_signals(driver, signal_links, output_path):
     ss = SignalScrapper(driver)
-    signals = ss.scrape(signal_links)
+    signals = ss.scrape(signal_links, output_path=output_path)
     records = [signal.record() for signal in signals]
     return pd.DataFrame.from_records(records)
 
 @app.command()
 def main(
     limit: int = 3,
-    output_path: str = "output.csv",
+    output_dat_path: Path = Path("output.dat"),
+    output_csv_path: Path = Path("output.csv"),
 ):
+
+    if output_dat_path.exists():
+        raise FileExistsError(f"{output_dat_path} already exists.")
+
     options = webdriver.ChromeOptions()
     options.add_argument('--blink-settings=imagesEnabled=false')
     driver = webdriver.Chrome(options=options)
     signal_links = get_signal_links(driver, limit)
-    signals = scraping_signals(driver, signal_links)
-    signals.to_csv(f"{output_path}", index=False)
+    signals = scraping_signals(driver, signal_links, output_dat_path)
+    signals.to_csv(f"{output_csv_path}", index=False)
 
 if __name__ == "__main__":
     app()

@@ -1,6 +1,11 @@
 import ast
 import pandas as pd
 
+from typing import Union
+
+
+GrothTableInput = Union[pd.DataFrame, str, list, dict]
+
 
 class SignalAccount:
 
@@ -10,7 +15,7 @@ class SignalAccount:
         growth_ave: float,
         deposit: float,
         withdrawal: float,
-        growth_table: pd.DataFrame | str,
+        growth_table: GrothTableInput,
     ):
         self.growth_total = growth_total
         self.growth_ave = growth_ave
@@ -24,13 +29,13 @@ class SignalAccount:
             "growth_ave": self.growth_ave,
             "deposit": self.deposit,
             "withdrawal": self.withdrawal,
-            "growth_table": self.growth_table.to_records(index=True),
+            "growth_table": self.growth_table.to_dict(),
         }
 
     def get_growth_table(self):
         return self.growth_table
 
-    def format_growth_table(self, value):
+    def format_growth_table(self, value: GrothTableInput) -> pd.DataFrame:
         columns = [
             "year",
             "Jan",
@@ -55,5 +60,25 @@ class SignalAccount:
             df.columns = columns
             df.set_index("year", inplace=True)
             return df
+        elif isinstance(value, list):
+            df = pd.DataFrame(value)
+            df.columns = columns
+            df.rename_axis("year", inplace=True)
+            return df
+        elif isinstance(value, dict):
+            df = pd.DataFrame.from_dict(value)
+            df.rename_axis("year", inplace=True)
+            return df
         else:
             raise TypeError(f"Not supported type: {type(value)}")
+
+    @classmethod
+    def from_record(cls, record: dict):
+        growth_table = record["growth_table"]
+        return cls(
+            growth_total=record["growth_total"],
+            growth_ave=record["growth_ave"],
+            deposit=record["deposit"],
+            withdrawal=record["withdrawal"],
+            growth_table=growth_table,
+        )

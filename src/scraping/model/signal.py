@@ -24,3 +24,10 @@ class Signal:
 
     def get_growth_table(self):
         return self.account.growth_table
+
+    @classmethod
+    def from_record(cls, record: dict):
+        top = SignalTop.from_record(record)
+        account = SignalAccount.from_record(record)
+        stats = SignalStats.from_record(record)
+        return cls(top, account, stats)

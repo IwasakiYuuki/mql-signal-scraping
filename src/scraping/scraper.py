@@ -1,9 +1,11 @@
 import re
+import time
+from pathlib import Path
 
 from tqdm import tqdm
 import pandas as pd
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
@@ -21,11 +23,22 @@ class SignalScrapper:
     def __init__(self, driver: WebDriver):
         self.driver = driver
 
-    def scrape(self, urls: list[str], close: bool = True) -> list[Signal]:
+    def scrape(self, urls: list[str], close: bool = True, output_path: Path | None = None) -> list[Signal]:
         signals = []
         for url in tqdm(urls):
-            self._get(url)
-            signals.append(self._scrape())
+            try:
+                self._get(url)
+                signal = self._scrape()
+                signals.append(signal)
+                if output_path:
+                    with open(output_path, "a") as f:
+                        record = str(signal.record())
+                        record = record.replace("\n", "")
+                        f.write(f"{record}\n")
+            except Exception:
+                pass
+            finally:
+                time.sleep(10)
         if close:
             self._close()
         return signals
@@ -101,7 +114,13 @@ class SignalScrapper:
         author = waf_element(self.driver, xpaths["author"]).text
         rating = _format_rating(waf_element(self.driver, xpaths["rating"]).get_attribute("class") or "")
         rating_num = _format_rating_num(waf_element(self.driver, xpaths["rating_num"]).text)
-        reliability = _format_reliability(waf_element(self.driver, xpaths["reliability"]).get_attribute("class") or "")
+        # The reliability factor may not be present. In that case, treat it as -1.
+        try:
+            reliability_ele = self.driver.find_element(By.XPATH, xpaths["reliability"]).get_attribute("class")
+            reliability_ele = reliability_ele or ""
+            reliability = _format_reliability(reliability_ele)
+        except WebDriverException:
+            reliability = -1
         week = _format_week(waf_element(self.driver, xpaths["week"]).text)
         subscriber_num = int(waf_element(self.driver, xpaths["subscriber_num"]).text)
         subscriber_funds = _format_subscriber_funds(waf_element(self.driver, xpaths["subscriber_funds"]).text)
